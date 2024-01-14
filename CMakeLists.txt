@@ -2,8 +2,8 @@
 # Licensed under the MIT License.
 
 cmake_minimum_required (VERSION 3.12)
-#set(CMAKE_CXX_STANDARD 17)
-#set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 project (SPTAGLib)
 
@@ -27,7 +27,7 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
     endif()
     set (CMAKE_CXX_FLAGS "-Wall -Wunreachable-code -Wno-reorder -Wno-pessimizing-move -Wno-unused-result -Wno-strict-aliasing -Wno-sign-compare -Wno-unknown-pragmas -Wcast-align -lm -lrt -fopenmp -std=c++17")
     set (CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -march=native")
-    set (CMAKE_CXX_FLAGS_DEBUG   "-g -DDEBUG")
+    set (CMAKE_CXX_FLAGS_DEBUG   "-ggdb -DDEBUG")
 
     find_path(NUMA_INCLUDE_DIR NAME numa.h
       HINTS $ENV{HOME}/local/include /opt/local/include /usr/local/include /usr/include)
@@ -121,6 +121,17 @@ option(ROCKSDB "ROCKSDB" ON)
 if (ROCKSDB)
     add_definitions(-DROCKSDB)
 endif()
+
+# 添加libbsd
+find_library(LIBBSD_LIBRARY NAMES bsd)
+
+if (LIBBSD_LIBRARY)
+    message(STATUS "Found bsd.")
+    # target_link_libraries(YourTargetName ${LIBBSD_LIBRARY})
+else()
+    message(FATAL_ERROR "Could not find libbsd library")
+endif()
+
 
 add_subdirectory (ThirdParty/zstd/build/cmake)
 
