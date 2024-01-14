@@ -5,7 +5,13 @@
 find_package(Python3 COMPONENTS Development)
 
 find_package(CUDA)
-
+## lxy 修改 dell01 python路径
+set(Python3_INCLUDE_DIRS /usr/include/python3.10)
+set(Python3_LIBRARY_DIRS /usr/lib/python3.10/config-3.10-x86_64-linux-gnu)
+set(Python3_LIBRARIES /usr/lib/python3.10/config-3.10-x86_64-linux-gnu/libpython3.10.so)
+set(Python3_FOUND true)
+# 自己设置cuda
+#set (CUDA_FOUND false)
 if ((NOT GPU) OR (NOT Python3_FOUND))
     set (CUDA_FOUND false)
 endif()
