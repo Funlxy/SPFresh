@@ -238,7 +238,11 @@ namespace SPTAG
             }
             ~Dataset()
             {
+
                 if (ownData) ALIGN_FREE(data);
+                if (incBlocks==nullptr) {
+                    return;
+                }
                 for (char* ptr : *incBlocks) ALIGN_FREE(ptr);
                 incBlocks->clear();
             }

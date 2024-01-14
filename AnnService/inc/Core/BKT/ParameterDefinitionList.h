@@ -37,7 +37,7 @@ DefineBKTParameter(m_pGraph.m_iGPULeafSize, int, 500, "GPULeafSize")
 DefineBKTParameter(m_pGraph.m_iheadNumGPUs, int, 1, "HeadNumGPUs")
 DefineBKTParameter(m_pGraph.m_iTPTBalanceFactor, int, 2, "TPTBalanceFactor")
 
-DefineBKTParameter(m_iNumberOfThreads, int, 1L, "NumberOfThreads")
+DefineBKTParameter(m_iNumberOfThreads, int, 80L, "NumberOfThreads")
 DefineBKTParameter(m_iDistCalcMethod, SPTAG::DistCalcMethod, SPTAG::DistCalcMethod::Cosine, "DistCalcMethod")
 
 DefineBKTParameter(m_fDeletePercentageForRefine, float, 0.4F, "DeletePercentageForRefine")

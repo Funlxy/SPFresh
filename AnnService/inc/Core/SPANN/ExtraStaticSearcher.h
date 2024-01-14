@@ -1302,6 +1302,8 @@ namespace SPTAG
                 Helper::DiskIO* indexFile = m_indexFiles[fileid].get();
                 auto numRead = indexFile->ReadBinary(totalBytes, posting.data(), listInfo->listOffset);
                 if (numRead != totalBytes) {
+                    LOG(Helper::LogLevel::LL_Info, "listinfo->offset=%llu\n",listInfo->listOffset);
+                    LOG(Helper::LogLevel::LL_Info, "tell offset=%llu\n",indexFile->TellP());
                     LOG(Helper::LogLevel::LL_Error, "File %s read bytes, expected: %zu, acutal: %llu.\n", m_extraFullGraphFile.c_str(), totalBytes, numRead);
                     throw std::runtime_error("File read mismatch");
                 }

@@ -118,7 +118,8 @@ int main(int argc, char* argv[])
                     case VectorValueType::Name: \
                         quantizer.reset(new COMMON::PQQuantizer<Type>(options->m_quantizedDim, 256, (DimensionType)(options->m_dimension/options->m_quantizedDim), false, TrainPQQuantizer<Type>(options, set, quantized_vectors))); \
                         break;
-
+                    default:
+                        break;
 #include "inc/Core/DefinitionList.h"
 #undef DefineVectorValueType
             }

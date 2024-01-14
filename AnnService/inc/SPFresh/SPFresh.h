@@ -489,7 +489,7 @@ namespace SPTAG {
                 }
                 return vectorSet;
             }
-
+            // LoadTrace是Load向量的ID
             std::shared_ptr<VectorSet>  LoadUpdateVectors(SPANN::Options& p_opts, std::vector<SizeType>& insertSet, SizeType updateSize)
             {
                 LOG(Helper::LogLevel::LL_Info, "Load Update Vectors\n");
@@ -509,7 +509,7 @@ namespace SPTAG {
                     LOG(Helper::LogLevel::LL_Error, "Failed to read VectorSet!\n");
                     throw std::runtime_error("Failed read file");
                 }
-
+                // col代表dim纬度
                 std::uint64_t totalRecordVectorBytes = ((std::uint64_t)GetValueTypeSize(p_opts.m_valueType)) * updateSize * col;
                 ByteArray vectorSet;
                 if (totalRecordVectorBytes > 0) {
@@ -566,6 +566,7 @@ namespace SPTAG {
                 LOG(Helper::LogLevel::LL_Error, "K: %d, TruthResultNum: %d\n", p_opts.m_resultNum, p_opts.m_truthResultNum);    
                 COMMON::TruthSet::LoadTruth(ptr, truth, numQueries, p_opts.m_truthResultNum, p_opts.m_resultNum, p_opts.m_truthType);
                 char tmp[4];
+                LOG(Helper::LogLevel::LL_Error, "tell_p=%d\n", ptr->TellP());///////
                 if (ptr->ReadBinary(4, tmp) == 4) {
                     LOG(Helper::LogLevel::LL_Error, "Truth number is larger than query number(%d)!\n", numQueries);
                 }
@@ -602,7 +603,7 @@ namespace SPTAG {
                         results[j].Reset();
                     }
                     totalQPS += SearchSequential(p_index, numThreads, results, stats, queryCountLimit, internalResultNum);
-                    //PrintStats<ValueType>(stats);
+                    PrintStats<ValueType>(stats);
                     AddStats(TotalStats, stats);
                 }
                 if (showStatus) LOG(Helper::LogLevel::LL_Info, "Current time: %.0lf, Searching Times: %d, AvgQPS: %.2lf.\n", second, avgStatsNum, totalQPS/avgStatsNum);
@@ -615,7 +616,7 @@ namespace SPTAG {
                 {
                     if (p_opts.m_searchResult.empty()) {
                         std::vector<std::set<SizeType>> truth;
-                        int truthK = p_opts.m_resultNum;
+                        int truthK = p_opts.m_resultNum; // 这里又这样搞
                         LoadTruth(p_opts, truth, numQueries, truthFileName, truthK);
                         CalculateRecallSPFresh<ValueType>((p_index->GetMemoryIndex()).get(), results, truth, p_opts.m_resultNum, truthK, querySet, vectorSet, numQueries);
                     } else {

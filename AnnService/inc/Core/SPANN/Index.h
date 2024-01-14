@@ -187,12 +187,12 @@ namespace SPTAG
                 if (p_data == nullptr || p_vectorNum == 0 || p_dimension == 0) return ErrorCode::EmptyData;
                 if (p_dimension != GetFeatureDim()) return ErrorCode::DimensionSizeMismatch;
 
-                SizeType begin, end;
+                SizeType begin;
                 {
                     std::lock_guard<std::mutex> lock(m_dataAddLock);
 
                     begin = m_versionMap.GetVectorNum();
-                    end = begin + p_vectorNum;
+                    // end = begin + p_vectorNum;
 
                     if (begin == 0) { return ErrorCode::EmptyIndex; }
 

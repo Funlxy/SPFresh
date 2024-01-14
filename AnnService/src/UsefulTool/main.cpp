@@ -119,7 +119,7 @@ void LoadTruth(ToolOptions& p_opts, std::vector<std::set<SizeType>>& truth, int 
 {
     auto ptr = f_createIO();
     LOG(Helper::LogLevel::LL_Info, "Start loading TruthFile...: %s\n", truthfilename.c_str());
-    
+    // 初始化文件流
     if (ptr == nullptr || !ptr->Initialize(truthfilename.c_str(), std::ios::in | std::ios::binary)) {
         LOG(Helper::LogLevel::LL_Error, "Failed open truth file: %s\n", truthfilename.c_str());
         exit(1);
@@ -127,6 +127,7 @@ void LoadTruth(ToolOptions& p_opts, std::vector<std::set<SizeType>>& truth, int 
     LOG(Helper::LogLevel::LL_Error, "K: %d, TruthResultNum: %d\n", p_opts.m_resultNum, p_opts.m_resultNum);    
     COMMON::TruthSet::LoadTruth(ptr, truth, numQueries, p_opts.m_resultNum, p_opts.m_resultNum, p_opts.m_truthType);
     char tmp[4];
+    LOG(Helper::LogLevel::LL_Error, "tell_p=%d\n", ptr->TellP());///////
     if (ptr->ReadBinary(4, tmp) == 4) {
         LOG(Helper::LogLevel::LL_Error, "Truth number is larger than query number(%d)!\n", numQueries);
     }
@@ -162,6 +163,7 @@ std::shared_ptr<VectorSet> LoadQuerySet(ToolOptions& p_opts)
     return queryReader->GetVectorSet();
 }
 
+// 读向量id和距离,前八个字节为查询的数量和resultNum的数量。
 void LoadOutputResult(ToolOptions& p_opts, std::vector<std::vector<SizeType>>& ids,
     std::vector<std::vector<float>>& dists) 
 {
@@ -180,21 +182,19 @@ void LoadOutputResult(ToolOptions& p_opts, std::vector<std::vector<SizeType>>& i
         LOG(Helper::LogLevel::LL_Error, "Fail to read result file!\n");
         exit(1);
     }
-
-
-    for (size_t i = 0; i < NumQuerys; ++i)
+    for (size_t i = 0; i < NumQuerys; ++i) //遍历每个查询
     {
         std::vector<SizeType> tempVec_id;
         std::vector<float> tempVec_dist;
         for (int j = 0; j < resultNum; ++j)
         {
-            int32_t i32Val;
+            int32_t i32Val;// 读4字节 -> id
             if (ptr->ReadBinary(sizeof(i32Val), (char*)&i32Val) != sizeof(i32Val)) {
                 LOG(Helper::LogLevel::LL_Error, "Fail to read result file!\n");
                 exit(1);
             }
 
-            float fVal;
+            float fVal; // 读4字节-> dist 
             if (ptr->ReadBinary(sizeof(fVal), (char*)&fVal) != sizeof(fVal)) {
                 LOG(Helper::LogLevel::LL_Error, "Fail to read result file!\n");
                 exit(1);
@@ -306,7 +306,8 @@ void GenerateTrace(ToolOptions& p_opts)
     std::shared_ptr<VectorSet> vectorSet;
     std::vector<SizeType> current_list;
     std::vector<SizeType> reserve_list;
-    InitializeList(current_list, reserve_list, p_opts);
+    // current_list 前一半 reserve_list后一半
+    InitializeList(current_list, reserve_list, p_opts); // 初始化List
     LOG(Helper::LogLevel::LL_Info, "Loading Vector Set\n");
     if (!p_opts.m_vectorPath.empty() && fileexists(p_opts.m_vectorPath.c_str())) {
         std::shared_ptr<Helper::ReaderOptions> vectorOptions(new Helper::ReaderOptions(p_opts.m_inputValueType, p_opts.m_dimension, p_opts.m_inputFileType, p_opts.m_vectorDelimiter));
@@ -328,14 +329,14 @@ void GenerateTrace(ToolOptions& p_opts)
     for (int j = 0; j < p_opts.updateSize; j++) {
         deleteList[j] = current_list[p_opts.baseNum-j-1];
     }
-    current_list.resize(p_opts.baseNum-p_opts.updateSize);
+    current_list.resize(p_opts.baseNum-p_opts.updateSize);// 去掉加入到deleteList中的向量
     LOG(Helper::LogLevel::LL_Info, "Generate insert list\n");
     std::shuffle(reserve_list.begin(), reserve_list.end(), rg);
     for (int j = 0; j < p_opts.updateSize; j++) {
-        insertList[j] = reserve_list[p_opts.reserveNum-j-1];
-        current_list.push_back(reserve_list[p_opts.reserveNum-j-1]);
+        insertList[j] = reserve_list[p_opts.reserveNum-j-1]; // 插入
+        current_list.push_back(reserve_list[p_opts.reserveNum-j-1]); // current就放入
     }
-
+    // reserver_list类似于一个向量池
     reserve_list.resize(p_opts.reserveNum-p_opts.updateSize);
     for (int j = 0; j < p_opts.updateSize; j++) {
         reserve_list.push_back(deleteList[j]);
@@ -402,29 +403,32 @@ template <typename ValueType>
 void ConvertTruth(ToolOptions& p_opts)
 {
     std::vector<SizeType> current_list;
+    // add new
+    LOG(Helper::LogLevel::LL_Info,"currentListFileName:%s\n",(p_opts.currentListFileName + std::to_string(p_opts.batch)).c_str());
     LoadUpdateMapping(p_opts.currentListFileName + std::to_string(p_opts.batch), current_list);
-    int K = p_opts.m_resultNum;
+    int K = p_opts.m_resultNum; // 这里也没定义
 
-    int numQueries = p_opts.m_querySize;
-
+    int numQueries = p_opts.m_querySize;//还是没定义
+    LOG(Helper::LogLevel::LL_Info,"numQueries:%d\n",numQueries);
     std::string truthFile = p_opts.m_truthPath + std::to_string(p_opts.batch);
     std::vector<std::vector<SizeType>> truth;
-    LOG(Helper::LogLevel::LL_Info, "Start loading TruthFile...\n");
+    // add new
+    LOG(Helper::LogLevel::LL_Info, "ConvertTruth Start loading TruthFile %s\n",truthFile.c_str());
     truth.resize(numQueries);
     auto ptr = f_createIO();
     if (ptr == nullptr || !ptr->Initialize(truthFile.c_str(), std::ios::in | std::ios::binary)) {
-        LOG(Helper::LogLevel::LL_Error, "Fail to read the file:%s\n", truthFile.c_str());
+        LOG(Helper::LogLevel::LL_Error, "In ConvertTruth Fail to read the file:%s\n", truthFile.c_str());
         exit(1);
     }
-
     if (ptr->TellP() == 0) {
         int row, originalK;
         if (ptr->ReadBinary(4, (char*)&row) != 4 || ptr->ReadBinary(4, (char*)&originalK) != 4) {
             LOG(Helper::LogLevel::LL_Error, "Fail to read truth file!\n");
             exit(1);
         }
+        LOG(Helper::LogLevel::LL_Info, "K:%d,originalK:%d\n",K,originalK);
     }
-
+    // 这里读的是K个,而不是originalK个(所以从10到100肯定有问题呀)
     for (int i = 0; i < numQueries; ++i)
     {
         truth[i].clear();
@@ -436,7 +440,7 @@ void ConvertTruth(ToolOptions& p_opts)
     }
 
     LOG(Helper::LogLevel::LL_Info, "ChangeMapping & Writing\n");
-    std::string truthFileAfter = p_opts.m_truthPath + "_after" + std::to_string(p_opts.batch);
+    std::string truthFileAfter = p_opts.m_truthPath + "_after" + std::to_string(p_opts.batch);//在这
     ptr = SPTAG::f_createIO();
     if (ptr == nullptr || !ptr->Initialize(truthFileAfter.c_str(), std::ios::out | std::ios::binary)) {
         LOG(Helper::LogLevel::LL_Error, "Fail to create the file:%s\n", truthFileAfter.c_str());
@@ -461,27 +465,37 @@ void CallRecall(ToolOptions& p_opts)
     std::vector<std::set<SizeType>> truth;
     int truthK = p_opts.m_resultNum;
     int K = p_opts.m_resultNum;
-    auto vectorSet = LoadVectorSet(p_opts, 10);
-    auto querySet = LoadQuerySet(p_opts);
-    int NumQuerys = querySet->Count();
-    LoadTruth(p_opts, truth, NumQuerys, truthfile, truthK);
+    auto vectorSet = LoadVectorSet(p_opts, 10);  // 把原始的向量集读进来,10进程,这个应该是读全部的，没毛病
+    auto querySet = LoadQuerySet(p_opts); // 这个应该没问题
+    int NumQuerys = querySet->Count();// 这么多个query
+    // 看LoadTruth源代码
+    LoadTruth(p_opts, truth, NumQuerys, truthfile, truthK); // 肯定有问题
     std::vector<std::vector<SizeType>> ids;
     std::vector<std::vector<float>> dists;
-
+    // 看看看看看看看
     LoadOutputResult(p_opts,ids, dists);
 
     float meanrecall = 0, minrecall = MaxDist, maxrecall = 0, stdrecall = 0;
     std::vector<float> thisrecall(NumQuerys, 0);
     std::unique_ptr<bool[]> visited(new bool[K]);
     LOG(Helper::LogLevel::LL_Info, "Start Calculating Recall\n");
-    for (SizeType i = 0; i < NumQuerys; i++)
+    LOG(Helper::LogLevel::LL_Error, "truth size = %d\n",truth.size());
+
+    for (SizeType i = 0; i < NumQuerys; i++) // 遍历每个查询
     {
-        memset(visited.get(), 0, K * sizeof(bool));
-        for (SizeType id : truth[i])
+        //LOG(Helper::LogLevel::LL_Error, "truth[%d] size = %d\n",i,truth[i].size());
+        memset(visited.get(), 0, K * sizeof(bool)); // visited[]置零
+        for (SizeType id : truth[i]) // truth[]存了我们跑出来的关于第i个query的最近k个
         {
             for (int j = 0; j < K; j++)
             {
                 if (visited[j] || ids[i][j] < 0) continue;
+                // if (ids[i][j] == id) // ids是我们跑出来的,truth是ground truth
+                // {
+                //     thisrecall[i] += 1;
+                //     visited[j] = true;
+                //     break;
+                // }
                 if (vectorSet != nullptr) {
                     float dist = dists[i][j];
                     float truthDist = COMMON::DistanceUtils::ComputeDistance((const ValueType*)querySet->GetVector(i), (const ValueType*)vectorSet->GetVector(id), vectorSet->Dimension(), SPTAG::DistCalcMethod::L2);

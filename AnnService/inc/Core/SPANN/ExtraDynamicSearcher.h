@@ -161,15 +161,17 @@ namespace SPTAG::SPANN {
 
     public:
         ExtraDynamicSearcher(const char* dbPath, int dim, int postingBlockLimit, bool useDirectIO, float searchLatencyHardLimit, int mergeThreshold, bool useSPDK = false, int batchSize = 64, int bufferLength = 3) {
-            if (useSPDK) {
+            if (useSPDK) { 
                 db.reset(new SPDKIO(dbPath, 1024 * 1024, MaxSize, postingBlockLimit + bufferLength, 1024, batchSize));
                 m_postingSizeLimit = postingBlockLimit * PageSize / (sizeof(ValueType) * dim + sizeof(int) + sizeof(uint8_t));
             } else {
 #ifdef ROCKSDB
+                LOG(Helper::LogLevel::LL_Info, "useeeeeeeeeeee RocksDb\n");
                 db.reset(new RocksDBIO(dbPath, useDirectIO));
                 m_postingSizeLimit = postingBlockLimit;
 #endif
             }
+            // 这一块跟用SPDK还是RocksDB没关系。。。
             m_metaDataSize = sizeof(int) + sizeof(uint8_t);
             m_vectorInfoSize = dim * sizeof(ValueType) + m_metaDataSize;
             m_hardLatencyLimit = std::chrono::microseconds((int)searchLatencyHardLimit * 1000);
@@ -535,10 +537,12 @@ namespace SPTAG::SPANN {
                 auto clusterBegin = std::chrono::high_resolution_clock::now();
                 // k = 2, maybe we can change the split number, now it is fixed
                 SPTAG::COMMON::KmeansArgs<ValueType> args(2, smallSample.C(), (SizeType)localIndices.size(), 1, p_index->GetDistCalcMethod());
+                // printf("1111 %p\n",args.m_pQuantizer);
+                // printf("2222 %p\n",&args.m_pQuantizer);
                 std::shuffle(localIndices.begin(), localIndices.end(), std::mt19937(std::random_device()()));
 
                 int numClusters = SPTAG::COMMON::KmeansClustering(smallSample, localIndices, 0, (SizeType)localIndices.size(), args, 1000, 100.0F, false, nullptr, m_opt->m_virtualHead);
-
+                
                 auto clusterEnd = std::chrono::high_resolution_clock::now();
                 elapsedMSeconds = std::chrono::duration_cast<std::chrono::microseconds>(clusterEnd - clusterBegin).count();
                 m_stat.m_clusteringCost += elapsedMSeconds;
@@ -839,7 +843,6 @@ namespace SPTAG::SPANN {
 
         inline void MergeAsync(VectorIndex* p_index, SizeType headID, std::function<void()> p_callback = nullptr)
         {
-            if (!m_opt->m_update) return;
             tbb::concurrent_hash_map<SizeType, SizeType>::const_accessor headIDAccessor;
             if (m_mergeList.find(headIDAccessor, headID)) {
                 return;
@@ -1093,8 +1096,10 @@ namespace SPTAG::SPANN {
             m_opt = &p_opt;
             LOG(Helper::LogLevel::LL_Info, "DataBlockSize: %d, Capacity: %d\n", m_opt->m_datasetRowsInBlock, m_opt->m_datasetCapacity);
 
-            if (!m_opt->m_useSPDK) {
-                m_versionMap->Load(m_opt->m_deleteIDFile, m_opt->m_datasetRowsInBlock, m_opt->m_datasetCapacity);
+            if (!m_opt->m_useSPDK) { // RocksDB修改,我根本就没有deleteIDFile这个文件
+                if(m_versionMap->Load(m_opt->m_deleteIDFile, m_opt->m_datasetRowsInBlock, m_opt->m_datasetCapacity)==ErrorCode::FailedOpenFile){
+                    LOG(Helper::LogLevel::LL_Error, "fail open %s\n", m_opt->m_deleteIDFile.c_str());
+                }
                 m_postingSizes.Load(m_opt->m_ssdInfoFile, m_opt->m_datasetRowsInBlock, m_opt->m_datasetCapacity);
                 LOG(Helper::LogLevel::LL_Info, "Current vector num: %d.\n", m_versionMap->GetVectorNum());
                 LOG(Helper::LogLevel::LL_Info, "Current posting num: %d.\n", m_postingSizes.GetPostingNum());
@@ -1148,6 +1153,7 @@ namespace SPTAG::SPANN {
             }
 
             readLatency += ((double)std::chrono::duration_cast<std::chrono::microseconds>(readEnd - readStart).count());
+
             for (uint32_t pi = 0; pi < postingLists.size(); ++pi) {
                 auto curPostingID = p_exWorkSpace->m_postingIDs[pi];
                 std::string& postingList = postingLists[pi];
@@ -1239,7 +1245,7 @@ namespace SPTAG::SPANN {
             // m_metaDataSize = sizeof(int) + sizeof(uint8_t) + sizeof(float);
             m_metaDataSize = sizeof(int) + sizeof(uint8_t);
 
-            LOG(Helper::LogLevel::LL_Info, "Build SSD Index.\n");
+            LOG(Helper::LogLevel::LL_Info, "Build SSD Index.(In Dynamic)\n");
 
             Selection selections(static_cast<size_t>(fullCount) * m_opt->m_replicaCount, m_opt->m_tmpdir);
             LOG(Helper::LogLevel::LL_Info, "Full vector count:%d Edge bytes:%llu selection size:%zu, capacity size:%zu\n", fullCount, sizeof(Edge), selections.m_selections.size(), selections.m_selections.capacity());

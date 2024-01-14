@@ -311,6 +311,7 @@ break;
                         (NeighborhoodDists)[i][j] = MaxDist;
 
                 auto t1 = std::chrono::high_resolution_clock::now();
+                LOG(Helper::LogLevel::LL_Info, "before build TPTree , remain threads: %d Max_threads: %d\n", omp_get_num_threads(), omp_get_max_threads());                    
                 LOG(Helper::LogLevel::LL_Info, "Parallel TpTree Partition begin\n");
 #pragma omp parallel for schedule(dynamic)
                 for (int i = 0; i < m_iTPTNumber; i++)
@@ -324,6 +325,7 @@ break;
                 LOG(Helper::LogLevel::LL_Info, "Parallel TpTree Partition done\n");
                 auto t2 = std::chrono::high_resolution_clock::now();
                 LOG(Helper::LogLevel::LL_Info, "Build TPTree time (s): %lld\n", std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count());
+                LOG(Helper::LogLevel::LL_Info, "After build TPTree , remain threads: %d Max_threads: %d\n", omp_get_num_threads(), omp_get_max_threads());                    
 
                 for (int i = 0; i < m_iTPTNumber; i++)
                 {
@@ -372,7 +374,7 @@ break;
                 if (m_iGraphSize < 1000) {
                     RefineGraph<T>(index, idmap);
                     LOG(Helper::LogLevel::LL_Info, "Build RNG Graph end!\n");
-                    return;
+                    return; 
                 }
 
                 auto t1 = std::chrono::high_resolution_clock::now();
@@ -460,12 +462,21 @@ break;
             template <typename T>
             void RefineGraph(VectorIndex* index, const std::unordered_map<SizeType, SizeType>* idmap = nullptr)
             {
+                LOG(Helper::LogLevel::LL_Info, "Refine RNG threads: %d Max_threads: %d\n", omp_get_num_threads(), omp_get_max_threads());
                 for (int iter = 0; iter < m_iRefineIter - 1; iter++)
                 {
                     auto t1 = std::chrono::high_resolution_clock::now();
+
 #pragma omp parallel for schedule(dynamic)
                     for (SizeType i = 0; i < m_iGraphSize; i++)
                     {
+                        if (omp_get_num_threads()==1)
+                        {
+                            
+                            omp_set_num_threads(80);
+                            LOG(Helper::LogLevel::LL_Info, "Refine RNG new set thread: %d Max_threads: %d\n", omp_get_num_threads(), omp_get_max_threads());
+                        }
+                        //if(i%2==0)LOG(Helper::LogLevel::LL_Info, "Refine RNG threads: %d Max_threads: %d\n", omp_get_num_threads(), omp_get_max_threads());                    
                         RefineNode<T>(index, i, false, false, (int)(m_iCEF * m_fCEFScale));
                         if ((i * 5) % m_iGraphSize == 0) LOG(Helper::LogLevel::LL_Info, "Refine %d %d%%\n", iter, static_cast<int>(i * 1.0 / m_iGraphSize * 100));
                     }
@@ -480,6 +491,7 @@ break;
 #pragma omp parallel for schedule(dynamic)
                     for (SizeType i = 0; i < m_iGraphSize; i++)
                     {
+                        //if(i%2==0)LOG(Helper::LogLevel::LL_Info, "Refine RNG threads: %d Max_threads: %d\n", omp_get_num_threads(), omp_get_max_threads());                    
                         RefineNode<T>(index, i, false, false, m_iCEF);
                         if ((i * 5) % m_iGraphSize == 0) LOG(Helper::LogLevel::LL_Info, "Refine %d %d%%\n", m_iRefineIter - 1, static_cast<int>(i * 1.0 / m_iGraphSize * 100));
                     }
@@ -507,6 +519,8 @@ break;
                 newGraph->m_iNeighborhoodSize = m_iNeighborhoodSize;
 
 #pragma omp parallel for schedule(dynamic)
+
+                // LOG(Helper::LogLevel::LL_Info, "Refine RNG threads: %d Max_threads: %d\n", omp_get_num_threads(), omp_get_max_threads());
                 for (SizeType i = 0; i < R; i++)
                 {
                     if ((i * 5) % R == 0) LOG(Helper::LogLevel::LL_Info, "Refine %d%%\n", static_cast<int>(i * 1.0 / R * 100));

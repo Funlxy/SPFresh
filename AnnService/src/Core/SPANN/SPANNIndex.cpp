@@ -123,12 +123,13 @@ namespace SPTAG
         ErrorCode Index<T>::LoadIndexData(const std::vector<std::shared_ptr<Helper::DiskIO>>& p_indexStreams)
         {
             m_index->SetQuantizer(m_pQuantizer);
+            // Tree index Load....
             if (m_index->LoadIndexData(p_indexStreams) != ErrorCode::Success) return ErrorCode::Fail;
 
             m_index->SetParameter("NumberOfThreads", std::to_string(m_options.m_iSSDNumberOfThreads));
             m_index->SetParameter("MaxCheck", std::to_string(m_options.m_maxCheck));
             m_index->SetParameter("HashTableExponent", std::to_string(m_options.m_hashExp));
-            m_index->UpdateIndex();
+            m_index->UpdateIndex(); // 设置线程数
             m_index->SetReady(true);
 
             // TODO: Choose an extra searcher based on config
@@ -139,11 +140,13 @@ namespace SPTAG
             }
             else
             {
+                LOG(Helper::LogLevel::LL_Info, "m_options.m_KVPath:%s\n",m_options.m_KVPath.c_str());
+                LOG(Helper::LogLevel::LL_Info, "m_options.m_spdkMappingPath:%s\n",m_options.m_spdkMappingPath.c_str());
                 if (m_options.m_useKV) {
                     if (m_options.m_inPlace) {
                         m_extraSearcher.reset(new ExtraDynamicSearcher<T>(m_options.m_KVPath.c_str(), m_options.m_dim, INT_MAX, m_options.m_useDirectIO, m_options.m_latencyLimit, m_options.m_mergeThreshold));
                     }
-                    else {
+                    else { // 进入到这里
                         m_extraSearcher.reset(new ExtraDynamicSearcher<T>(m_options.m_KVPath.c_str(), m_options.m_dim, m_options.m_postingPageLimit * PageSize / (sizeof(T) * m_options.m_dim + sizeof(int) + sizeof(uint8_t)), m_options.m_useDirectIO, m_options.m_latencyLimit, m_options.m_mergeThreshold));
                     }
                 }
@@ -153,7 +156,7 @@ namespace SPTAG
                     m_extraSearcher.reset(new ExtraStaticSearcher<T>());
                 }
             }
-
+            // 这里进行versionMap的load
             if (!m_extraSearcher->LoadIndex(m_options, m_versionMap)) return ErrorCode::Fail;
 
             if (m_options.m_excludehead) {
@@ -194,6 +197,7 @@ namespace SPTAG
                             {
                                 LOG(Helper::LogLevel::LL_Info, "Copy to SPDK: Sent %.2lf%%...\n", index * 100.0 / totalPostingNum);
                             }
+                            // 对齐？
                             std::string tempPosting;
                             storeExtraSearcher->GetWritePosting(index, tempPosting);
                             int vectorNum = (int)(tempPosting.size() / (m_vectorInfoSize - sizeof(uint8_t)));
@@ -222,7 +226,7 @@ namespace SPTAG
                                 memcpy(ptr + sizeof(int) + sizeof(uint8_t), m_index->GetSample(index), m_vectorInfoSize - sizeof(int) + sizeof(uint8_t));
                                 newPosting = appendPosting + newPosting;
                             }
-
+                            // 对齐？
                             m_extraSearcher->GetWritePosting(index, newPosting, true);
                         }
                         else
@@ -232,9 +236,9 @@ namespace SPTAG
                         }
                     }
                 };
-            for (int j = 0; j < m_options.m_iSSDNumberOfThreads; j++) { threads.emplace_back(func); }
-            for (auto& thread : threads) { thread.join(); }
-            } else {
+                for (int j = 0; j < m_options.m_iSSDNumberOfThreads; j++) { threads.emplace_back(func); }
+                for (auto& thread : threads) { thread.join(); }
+            } else { // 这里RocksDB
                 m_versionMap.Load(m_options.m_deleteIDFile, m_index->m_iDataBlockSize, m_index->m_iDataCapacity);
             }
 
@@ -253,6 +257,7 @@ namespace SPTAG
                     }
                     // m_options.m_vectorSize = vectorReader->GetVectorSet()->Count();
                 }
+
                 m_extraSearcher->RefineIndex(vectorReader, m_index);
             }
 

@@ -68,7 +68,7 @@ namespace SPTAG
                     }
                 }
                 truth.clear();
-                truth.resize(p_iTruthNumber);
+                truth.resize(p_iTruthNumber); // p_iTruthNumber(query的个数)个set
                 std::vector<int> vec(originalK);
                 for (int i = 0; i < p_iTruthNumber; i++)
                 {
@@ -76,7 +76,7 @@ namespace SPTAG
                         LOG(Helper::LogLevel::LL_Error, "Truth number(%d) and query number(%d) are not match!\n", i, p_iTruthNumber);
                         exit(1);
                     }
-                    truth[i].insert(vec.begin(), vec.begin() + K);
+                    truth[i].insert(vec.begin(), vec.begin() + K); // 读originalK个,实际插入K个
                 }
             }
 

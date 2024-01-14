@@ -30,7 +30,11 @@ namespace SPTAG::SPANN
             bool FullMergeV2(const rocksdb::MergeOperator::MergeOperationInput& merge_in,
                 rocksdb::MergeOperator::MergeOperationOutput* merge_out) const override
             {
-                size_t length = (merge_in.existing_value)->size();
+                size_t length = 0;
+                if(merge_in.existing_value){
+                    length = (merge_in.existing_value)->size();
+                }
+                //size_t length = (merge_in.existing_value)->size();
                 for (const rocksdb::Slice& s : merge_in.operand_list) {
                     length += s.size();
                 }

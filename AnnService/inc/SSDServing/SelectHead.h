@@ -799,6 +799,8 @@ namespace SPTAG {
                 int dataRowsInBlock = opts.m_datasetRowsInBlock;
                 int dataCapacity = opts.m_datasetCapacity;
                 COMMON::Dataset<T> data(p_vectorSet->Count(), p_vectorSet->Dimension(), dataRowsInBlock, dataCapacity, (T*)(p_vectorSet->GetData()));
+                // add new
+                LOG(Helper::LogLevel::LL_Info, "************************m_iNumberOfThreads=%lld\n",opts.m_iNumberOfThreads);
                 bkt->BuildTrees<T>(data, opts.m_distCalcMethod, opts.m_iNumberOfThreads, nullptr, nullptr, true);
                 double elapsedMinutes = sw.getElapsedMin();
 

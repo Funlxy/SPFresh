@@ -181,65 +181,6 @@ namespace SPTAG
         p_query.SortResult(); \
 */
 
-// #define Search(CheckDeleted, CheckDuplicated) \
-//         std::shared_lock<std::shared_timed_mutex> lock(*(m_pTrees.m_lock)); \
-//         m_pTrees.InitSearchTrees(m_pSamples, m_fComputeDistance, p_query, p_space); \
-//         m_pTrees.SearchTrees(m_pSamples, m_fComputeDistance, p_query, p_space, m_iNumberOfInitialDynamicPivots); \
-//         const DimensionType checkPos = m_pGraph.m_iNeighborhoodSize - 1; \
-//         while (!p_space.m_NGQueue.empty()) { \
-//             NodeDistPair gnode = p_space.m_NGQueue.pop(); \
-//             SizeType tmpNode = gnode.node; \
-//             const SizeType *node = m_pGraph[tmpNode]; \
-//             _mm_prefetch((const char *)node, _MM_HINT_T0); \
-//             for (DimensionType i = 0; i <= checkPos; i++) { \
-//                 if (node[i] < 0 || node[i] >= m_pSamples.R()) break; \
-//                 _mm_prefetch((const char *)(m_pSamples)[node[i]], _MM_HINT_T0); \
-//             } \
-//             if (gnode.distance <= p_query.worstDist()) { \
-//                 SizeType checkNode = node[checkPos]; \
-//                 if (checkNode < -1) { \
-//                     const COMMON::BKTNode& tnode = m_pTrees[-2 - checkNode]; \
-//                     SizeType i = -tnode.childStart; \
-//                     do { \
-//                         CheckDeleted \
-//                         { \
-//                             CheckDuplicated \
-//                             break; \
-//                         } \
-//                         tmpNode = m_pTrees[i].centerid; \
-//                     } while (i++ < tnode.childEnd); \
-//                } else { \
-//                    CheckDeleted \
-//                    { \
-//                        p_query.AddPoint(tmpNode, gnode.distance); \
-//                    } \
-//                } \
-//             } else { \
-//                 CheckDeleted \
-//                 { \
-//                     if (gnode.distance > p_space.m_Results.worst() || p_space.m_iNumberOfCheckedLeaves > p_space.m_iMaxCheck) { \
-//                         p_query.SortResult(); return; \
-//                     } \
-//                 } \
-//             } \
-//             for (DimensionType i = 0; i <= checkPos; i++) { \
-//                 SizeType nn_index = node[i]; \
-//                 if (nn_index < 0) break; \
-//                 if (nn_index >= m_pSamples.R()) continue; \
-//                 if (p_space.CheckAndSet(nn_index)) continue; \
-//                 float distance2leaf = m_fComputeDistance(p_query.GetQuantizedTarget(), (m_pSamples)[nn_index], GetFeatureDim()); \
-//                 p_space.m_iNumberOfCheckedLeaves++; \
-//                 if (p_space.m_Results.insert(distance2leaf)) { \
-//                     p_space.m_NGQueue.insert(NodeDistPair(nn_index, distance2leaf)); \
-//                 } \
-//             } \
-//             if (p_space.m_NGQueue.Top().distance > p_space.m_SPTQueue.Top().distance) { \
-//                 m_pTrees.SearchTrees(m_pSamples, m_fComputeDistance, p_query, p_space, m_iNumberOfOtherDynamicPivots + p_space.m_iNumberOfCheckedLeaves); \
-//             } \
-//         } \
-//         p_query.SortResult(); \
-
-
         template<typename T>
         template <bool(*notDeleted)(const COMMON::Labelset&, SizeType), 
             bool(*isDup)(COMMON::QueryResultSet<T>&, SizeType, float), 
@@ -470,6 +411,7 @@ namespace SPTAG
         ErrorCode Index<T>::BuildIndex(const void* p_data, SizeType p_vectorNum, DimensionType p_dimension, bool p_normalized, bool p_shareOwnership)
         {
             if (p_data == nullptr || p_vectorNum == 0 || p_dimension == 0) return ErrorCode::EmptyData;
+            LOG(Helper::LogLevel::LL_Info, "************************build index m_iNumberOfThreads=%lld\n",m_iNumberOfThreads);
 
             omp_set_num_threads(m_iNumberOfThreads);
 

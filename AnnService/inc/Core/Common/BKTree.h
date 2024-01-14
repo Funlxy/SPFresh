@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 #include <shared_mutex>
-
+#include <mutex>
 #include "inc/Core/VectorIndex.h"
 
 #include "CommonUtils.h"
@@ -31,6 +31,8 @@ namespace SPTAG
             BKTNode(SizeType cid = -1) : centerid(cid), childStart(-1), childEnd(-1) {}
         };
 
+        const std::shared_ptr<IQuantizer> null_quantizer = nullptr;
+
         template <typename T>
         struct KmeansArgs {
             int _K;
@@ -52,7 +54,12 @@ namespace SPTAG
             std::function<float(const T*, const T*, DimensionType)> fComputeDistance;
             const std::shared_ptr<IQuantizer>& m_pQuantizer;
 
-            KmeansArgs(int k, DimensionType dim, SizeType datasize, int threadnum, DistCalcMethod distMethod, const std::shared_ptr<IQuantizer>& quantizer = nullptr) : _K(k), _DK(k), _D(dim), _RD(dim), _T(threadnum), _M(distMethod), m_pQuantizer(quantizer){
+            KmeansArgs(int k, DimensionType dim, SizeType datasize, int threadnum, DistCalcMethod distMethod, const std::shared_ptr<IQuantizer>& quantizer = null_quantizer) : _K(k), _DK(k), _D(dim), _RD(dim), _T(threadnum), _M(distMethod), m_pQuantizer(quantizer){
+                if (!quantizer) {
+                    if(m_pQuantizer){
+                        printf("1231312312312312312312312323\n");
+                    }
+                }
                 if (m_pQuantizer) {
                     _RD = m_pQuantizer->ReconstructDim();
                     fComputeDistance = m_pQuantizer->DistanceCalcSelector<T>(distMethod);
@@ -60,7 +67,6 @@ namespace SPTAG
                 else {
                     fComputeDistance = COMMON::DistanceCalcSelector<T>(distMethod);
                 }
-
                 centers = (T*)ALIGN_ALLOC(sizeof(T) * _K * _D);
                 newTCenters = (T*)ALIGN_ALLOC(sizeof(T) * _K * _D);
                 counts = new SizeType[_K];
@@ -471,8 +477,10 @@ break;
             
             if (args.m_pQuantizer)
             {
+                printf("use quantizer\n");
                 switch (args.m_pQuantizer->GetReconstructType())
                 {
+                    
 #define DefineVectorValueType(Name, Type) \
 case VectorValueType::Name: \
 TryClustering<T, Type>(data, indices, first, last, args, samples, lambdaFactor, debug, abort, virtualCenter); \

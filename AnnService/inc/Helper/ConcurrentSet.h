@@ -6,6 +6,7 @@
 
 #ifndef _MSC_VER
 #include <shared_mutex>
+#include <mutex>
 #include <unordered_set>
 #include <unordered_map>
 #include <queue>
